@@ -1,0 +1,234 @@
+13:23
+Adding Resources
+
+app=Flask(__name__)
+api=Api(app)
+
+class HelloWorld(Resource):
+    def get(self):
+        # return key-value pair
+        return {"data": "Hello World"}
+
+api.add_resource(HelloWorld, "/helloworld")
+
+- must return pythond dict
+- add_resource(<class name>, <url "suffix" as the route>)
+
+----------------------------------------------------------------------
+Sending GET and POST requests
+
+- to send GET req to HelloWorld, send it to http://127.0.0.1:5000/ (local url) 
+    + "helloworld":
+
+    response = requests.get(BASE + "helloworld")
+    print(response.json())
+
+    - .json(): makes response appear as the actual dict, not as
+        "<Response [200]>" (means successful response)
+
+- can also send POST reqs via
+
+    response = requests.post(BASE + "helloworld")
+    - need a post method in HelloWorld since that is the class
+        registered at <local url> + "helloworld"
+
+----------------------------------------------------------------------
+Passing Arguments
+
+in main.py:
+api.add_resource(HelloWorld, "/helloworld/<string:name>/<int:test>")
+    
+in test.py:
+response = requests.get(BASE + "helloworld/miguel/23")
+
+- outputs: {'name': 'miguel', 'test': 23}
+
+----------------------------------------------------------------------
+Request Argument Parser
+
+request.form[<key name being looked for>]
+    - returns the corresponding value
+
+video_put_args = reqparse.RequestParser()
+video_put_args.add_argument("name", type=str, help="Name of video not set.")
+    - add_argument() adds key of key-val pair, help is msg sent when val not sent
+    - can make key's val required via adding ", required=True" at end
+        - if value not provided in request, outputs:
+            {'message': {'name': 'Name of video not set.'}}
+args = video_put_args.parse_args()
+    - parse_args() checks vals for all arguments(keys) and returns the
+        key-val pairs in a dict line
+        ex: in test.py:
+            response=requests.put(BASE+'video/1', 'likes': 10})            
+            - "args" becomes: {'name': None, 'views': None, 'likes': 10}
+
+response = requests.put(BASE + "video/1", {"likes": 10})
+    - outputs: {'1': {'name': None, 'views': None, 'likes': 10}}
+    - name and views are None bc no val provided in put request
+    - put request creates a "video" obj
+
+in main.py:
+args = video_put_args.parse_args()
+videos[video_id] = args
+return videos[video_id], 201 
+    - sets video_id as route param
+
+in test.py:
+response = requests.put(BASE + "video/1", {"likes": 10, 'name': 'miguel', 'views': 9001})
+print(response.json())response.close()
+input()
+response = requests.get(BASE + "video/1")
+print(response.json())
+    - inserts args into the video where video_id = 1
+    - gets args from the video that has video_id = 1
+
+----------------------------------------------------------------------
+Validating Requests
+
+- dont want program to crash if requesting video_id that doesnt exist
+
+in main.py:
+def abort_if_video_id_doesnt_exist(video_id):
+    if video_id not in videos:
+        abort(404, message = "Could not find video.")
+    
+class Video(Resource):
+    def get(self, video_id):
+        abort_if_video_id_doesnt_exist(video_id)
+        return videos[video_id]
+
+- must import abort from flask_restful
+- abort(<status code>, message = <msg as a string>)
+- if video_id not in videos{}, aborts before code reaches return videos[video_id]
+
+----------------------------------------------------------------------
+Handling Delete Requests
+
+def delete(self, video_id):
+    abort_if_video_id_doesnt_exist(video_id)
+    del videos[video_id]
+    
+    # status code 204 means deleted successfully
+    return ' ', 204
+
+in test.py:
+response=requests.delete(BASE+"video/0")
+print(response)
+
+- deletes video in videos{} where video_id = 0 (index 0)
+
+-----------------------------------------------------------------------------
+Creating Database and Model
+
+# define location of database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+db = SQLAlchemy(app)
+
+class VideoModel(db.Model):
+    # define all fields in video model
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    views = db.Column(db.Integer, nullable=False)
+    likes = db.Column(db.Integer, nullable=False)
+
+    # repr method to print something valid out
+    def __repr__(self):
+        return f"Video(name = {name}, views = {views}, likes = {likes})"
+
+# create database, comment out after running first time to
+# not reinitialize database
+# db.create_all() 
+
+- nullable=False: means cant be null
+- 'sqlite:///database.db': relative path where you want to create database.db
+
+-----------------------------------------------------------------------------
+Querying Database
+
+import fields, marshal_with
+
+resource_fields={
+    'id': fields.Integer,
+    'name': fields.String,
+    'views': fields.Integer,
+    'likes': fields.Integer,
+}
+
+class Video(Resource):
+    @marshal_with(resource_fields)
+    def get(self, video_id):
+        # returns VideoModel obj with the id
+        result= VideoModel.query.get(id=video_id) 
+
+        return result
+
+    @marshal_with(resource_fields)
+    def patch(self, video_id):
+        args=video_update_args.parse_args()
+        result=VideoModel.query.filter_by(id=video_id).first()
+        if not result:
+            abort(404, message="Video doesn't exist, cannot udpate.")
+        
+        # only update fields that are entered in arguments
+        if args['name']:
+            result.name=args['name']
+        if args['views']:
+            result.views=args['views']
+        if args['likes']:
+            result.likes=args['likes']
+
+        db.session.commit()
+        return result
+
+        def delete(self, video_id):        
+        # returns VideoModel obj with the id
+        result= VideoModel.query.filter_by(id=video_id).first()   
+        if not result:
+            abort(404, message="Could not find video with that id.")        
+        
+        # deletes obj from cu db session
+        db.session.delete(result)
+        db.session.commit()
+
+        # status code 204 means deleted successfully
+        return '', 204
+
+- methods take in params as: ('/<BASE>/<video_id>') bc of requests.get(), patch(), delete() in test.py
+- resouce_fields is the serialized format that you want Video(Resource) objects to 
+    be created in
+- @marshal_with(resouce_fields): decorates objects with the format
+    specified in resouce_fields
+- VideoModel.query.get(id=video_id): looks for all Video objects that have
+    the id equal to video_id
+- in test.py: response=requests.patch(BASE+"video/2", {"views": 99, "likes": 101})
+    - updates video with id=2's views to 99 and likes to 101
+- in test.py: response=requests.delete(BASE+"video/2"):
+    - deletes video with id=2
+- to get all videos, in get(), put: result=VideoModel.query.all()
+- Video.query():
+    .filter_by(video_id=0)
+        - only videos with video_id=0
+    .filter(Video.name.endswith('<example>'))
+        - all video with names ending with <example>
+    .order_by(Video.name).all()
+        - names in alphabetical order 
+    - all query() methods can have .first() or .all()
+----------------------------------------------------------------------------------------------
+pip install fuzzywuzzy
+pip install python-Levenshtein  
+
+to get:
+response = requests.get(BASE + "video?name='video')
+    - searches via name
+
+to put:
+response = requests.put(BASE + "video?id=5&name=FIVE&views=55&likes=5")
+    - id, name, views, and likes are required
+    - 4 is the id it will have
+
+to patch:
+response = requests.patch(BASE + "video/3", {'name': 'Three of You'})
+    - id is required, name/views/likes optional args
+
+to delete:
+response = requests.delete(BASE + "video?id=5")
