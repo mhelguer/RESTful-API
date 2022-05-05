@@ -32,7 +32,7 @@ resource_fields={
 
 # enables url to have ...video?name=For+You
 parser = reqparse.RequestParser()
-parser.add_argument("id", type=int, help="ID of video not set.", required=true)
+parser.add_argument("id", type=int, help="ID of video not set.")
 parser.add_argument("name", type=str, help="Name of video not set.")
 parser.add_argument("views", type=int, help="Views of video not set.")
 parser.add_argument("likes", type=int, help="Likes of video not set.")
