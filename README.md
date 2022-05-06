@@ -17,13 +17,23 @@ response = requests.get(BASE + "video?id=1")
 ```
 will return the video whose id is 1 when you run test.py in the terminal.
 Other examples are:
-* Get all videos: ```python
-response = requests.get(BASE + "video")```
-* Get videos via name search (uses fuzzy logic): ```python
-response = requests.get(BASE + "video?name=For+You")```
-* Insert a new video(id, name, views, and likes are required): ```python
-response = requests.put(BASE + "video?id=6&name=Six+Feet+Under&views=66&likes=6")```
-* Update a video(only id is required): ```python
-response = requests.patch(BASE + "video?id=6&name=Sixty+Seconds")```
-* Delete a video(id is required): ```python
-response = requests.delete(BASE + "video?id=5")```
+* Get all videos:
+```python
+response = requests.get(BASE + "video")
+```
+* Get videos via name search (uses fuzzy logic): 
+```python
+response = requests.get(BASE + "video?name=For+You")
+```
+* Insert a new video(id, name, views, and likes are required): 
+```python
+response = requests.put(BASE + "video?id=6&name=Six+Feet+Under&views=66&likes=6")
+```
+* Update a video(only id is required): 
+```python
+response = requests.patch(BASE + "video?id=6&name=Sixty+Seconds")
+```
+* Delete a video(id is required): 
+```python
+response = requests.delete(BASE + "video?id=5")
+```
