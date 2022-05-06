@@ -37,8 +37,7 @@ parser.add_argument("name", type=str, help="Name of video not set.")
 parser.add_argument("views", type=int, help="Views of video not set.")
 parser.add_argument("likes", type=int, help="Likes of video not set.")
 
-class Video(Resource):
-    # use fuzzy logic to return videos with names similar to the input video name
+class Video(Resource):    
     @marshal_with(resource_fields)
     def get(self):   
         args=parser.parse_args()
@@ -56,8 +55,9 @@ class Video(Resource):
                 if fuzz_ratio >= 70:                
                     results.append(r.name)
 
-            result=VideoModel.query.filter(VideoModel.name.in_(results)).all()
+            result=VideoModel.query.filter(VideoModel.name.in_(results)).all()            
         else:
+            # GET ALL VIDEOS
             result= VideoModel.query.all()
         if not result:
             abort(404, message="No video could be found with that name.")
@@ -73,14 +73,15 @@ class Video(Resource):
 
         video=VideoModel(id=args['id'], name=args['name'], views=args['views'], likes=args['likes'])
         
-        # adds obj to cu db session
+        # adds video object to current database session
         db.session.add(video)
         db.session.commit()
         return video, 201
 
     @marshal_with(resource_fields)
     def patch(self):
-        args=parser.parse_args()
+        # find video with the given id, then make appropriate changes
+        args=parser.parse_args()        
         result=VideoModel.query.filter_by(id=args['id']).first()
         if not result:
             abort(404, message="Video doesn't exist, cannot udpate.")
@@ -97,18 +98,16 @@ class Video(Resource):
         return result
 
     def delete(self):        
-        # returns VideoModel obj with the id
+        # find video with the input id and delete it
         args=parser.parse_args()
         video_id=args['id']
         result= VideoModel.query.filter_by(id=video_id).first()   
         if not result:
             abort(404, message="Could not find video with that id.")        
-        
-        # deletes obj from cu db session
+                
         db.session.delete(result)
         db.session.commit()
-
-        # status code 204 means deleted successfully
+        
         return 200
 
 api.add_resource(Video, '/video')

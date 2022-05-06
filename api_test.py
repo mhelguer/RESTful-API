@@ -22,7 +22,7 @@ class FlaskTest(unittest.TestCase):
         tester=app.test_client(self)
         BASE = "http://127.0.0.1:5000/"
         response = tester.get(BASE + "video?name=video")        
-
+        print(response)
         # do not include the brackets at the ends in the comparison    
         self.assertTrue(str(response.data.decode("utf-8")[1:-2]) == '{"id": 1, "name": "First Video", "views": 1, "likes": 0}, {"id": 2, "name": "Second Video", "views": 2, "likes": 2}')
     
